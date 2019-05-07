@@ -1,5 +1,9 @@
 # hydllp-server
 
+![Status](https://img.shields.io/badge/status-alpha-red.svg)
+[![Version](http://img.shields.io/pypi/v/hydllp-server.svg)](https://pypi.python.org/pypi/hydllp-server/)
+[![License](http://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/kinverarity1/lasio/blob/master/LICENSE)
+
 CherryPy server for the Hydstra HYDLLP executable, written in Python.
 
 If you are just looking for code to access Hydstra directly, you may want to
