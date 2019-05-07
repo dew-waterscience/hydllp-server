@@ -10,8 +10,15 @@ If you are just looking for code to access Hydstra directly, you may want to
 check out [pyhydllp](https://pypi.org/project/pyhydllp/). That calls the 
 HYDLLP DLL directly, and has a lot of helper stuff in pandas.
 
-I wrote this because (1) not all users have access to Hydstra executables
-locally on their machines and (2) the DLL code is finicky to get running.
+I wrote this because (1) not all users have the ability to execute Hydstra 
+(instead using the application through a locked-down remote machine) and 
+(2) the DLL code is finicky to get running.
+
+Assuming you have access to a server, this might help broaden access.
+
+DO NOT USE FOR PRODUCTION WITHOUT TESTING.
+
+I haven't don't any checks about thread-safe, concurrent access etc.
 
 ## Install
 
@@ -39,7 +46,7 @@ And the details of how you want your web app served:
 [cherrypy]
 server-socket_host = "0.0.0.0"
 server-socket_port = 8096
-server-thread_pool = 20
+server-thread_pool = 1
 engine-autoreload-on = false
 ```
 
@@ -108,7 +115,7 @@ to the configured endpoint:
  'buff_supplied': 3000}
  ```
 
-The web app will automatically increase the buffer size as required.
+The buffer size will be automatically increased as required.
 
 ## License
 
