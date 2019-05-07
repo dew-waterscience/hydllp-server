@@ -25,6 +25,7 @@ Create a [TOML](https://github.com/toml-lang/toml) file with the details of your
 Hydstra installation:
 
 ```toml
+[hydllp]
 hydllpx_exe = 't:\ts_manage\hyd\sys\run\hydllpx.exe'
 user = "person"
 pwd = "XYZ"
