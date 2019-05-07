@@ -50,7 +50,7 @@ server-thread_pool = 1
 engine-autoreload-on = false
 ```
 
-These are passed directly to ``cherrypy.config``, with the `-` replaced by `.`.
+These are passed directly to ``cherrypy.config`` (internally `-` is replaced with `.`).
 
 ## Run web app
 
