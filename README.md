@@ -17,7 +17,8 @@ locally on their machines and (2) the DLL code is finicky to get running.
 
 ## Web app configuration
 
-Create a [TOML]() file with the details of your Hydstra installation:
+Create a [TOML](https://github.com/toml-lang/toml) file with the details of your
+Hydstra installation:
 
 ```toml
 hydllpx_exe = 't:\ts_manage\hyd\sys\run\hydllpx.exe'
@@ -52,7 +53,7 @@ of entry points, the simplest of which is the `hydllp-server` executable:
 [07/May/2019:15:54:24] ENGINE Listening for SIGTERM.
 [07/May/2019:15:54:24] ENGINE Bus STARTING
 [07/May/2019:15:54:24] ENGINE Set handler for console events.
-[07/May/2019:15:54:24] ENGINE Serving on http://0.0.0.0:8096
+[07/May/2019:15:54:24] ENGINE Serving on http://127.0.0.1:8080
 [07/May/2019:15:54:24] ENGINE Bus STARTED
 ```
 
@@ -64,7 +65,7 @@ to the configured endpoint:
 ```python
 >>> import requests
 >>> r = requests.post(
-    "http://envtelem04:8096/api/",
+    "http://127.0.0.1:8080/api/",
     json={
         "function": "get_site_list", 
         "version": 1, 
