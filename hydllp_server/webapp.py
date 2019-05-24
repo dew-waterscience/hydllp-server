@@ -1,77 +1,143 @@
+from datetime import datetime
 import sys
 
-import cherrypy
 import json
+import pandas as pd
 import toml
+from fastapi import FastAPI, Body, Query, Path
+from typing import List
+
+from hydllp_server.hydstra_application import Hydstra
+
+hyd = Hydstra(
+    r"E:\Telemetry\kinverarity\dew-deployment-tools\services\hydllp-server\config.toml"
+)
 
 
-def get_hydstra_object(*args, thread_index=0, **kwargs):
-    from hydllp_server.hydstra_application import Hydstra
-
-    cherrypy.thread_data.hyd = Hydstra(*args, **kwargs)
-    return cherrypy.thread_data.hyd
+app = FastAPI()
 
 
-class HYDLLPEndpoint(object):
-    """Web service API endpoint for HYDLLP.
+@app.post("/hydllp")
+def hydllp(json_request: dict):
+    """Send a JSON call to hydllpx.exe.
 
-    Args:
-        config (dict): configuration for hydllp_server.Hydstra instance
-
-    You can POST JSON to this endpoint, and will receive the HYDLLP JSON
-    back.
-
-    See http://kisters.com.au/doco/hydllp.htm for details of the JSON requests
-    which you can send.
+    See <a href="http://kisters.com.au/doco/hydllp.htm">http://kisters.com.au/doco/hydllp.htm</a> for more details.
 
     """
-
-    def __init__(self, config):
-        self.config = config
-        self.hyd = get_hydstra_object(**config)
-
-    @cherrypy.expose
-    @cherrypy.tools.json_in()
-    @cherrypy.tools.json_out()
-    def index(self):
-        return self.hyd.request(cherrypy.request.json)
+    return hyd.request(json_request)
 
 
-def run(tomlfile=None, hydllp=None, cherrypy_config=None):
-    """Run server.
+@app.get("/sites")
+def get_site_list(site_list: str = "*"):
+    return hyd.request(
+        {"function": "get_site_list", "version": 1, "params": {"site_list": site_list}}
+    )
 
-    Args:
-        tomlfile (filename or file-like object, optional): configuration file
-        hydllp (dict): hydllp_server.Hydstra config
-        cherrypy_config (dict): cherrypy server config
 
-    The simplest usage is to pass tomlfile to this function. Otherwise
-    you can pass the dictionaries that would otherwise be inside your
-    TOML file as the hydllp and cherrypy_config kwargs.
-
+@app.get("/sites/{site_list}/traces")
+def get_ts_traces(
+    site_list: str = Path(..., description="Hydstra site list expression"),
+    start_time: datetime = Query(None, description="Start time in ISO8601 format"),
+    end_time: datetime = Query(None, description="End time in ISO8601 format"),
+    varfrom: str = Query(
+        "",
+        description="Hydstra variable to calculate from (only use for data transformation)",
+    ),
+    varto: str = Query(
+        "",
+        description="Hydstra variable to calculate to (only use for data transformation)",
+    ),
+    var_list: str = Query("114.00", description="Hydstra variable list"),
+    interval: str = Query(
+        "day",
+        description=(
+            "Period to aggregate over (ignored if data_type='point', "
+            "valid options are 'year, month, day, hour, minute, second, period'"
+        ),
+    ),
+    multiplier: int = 1,
+    report_time: str = "end",
+    offset: int = 0,
+    datasource: str = Query("A", description="Hydstra datasources to use"),
+    data_type: str = Query(
+        "point",
+        description=(
+            "Aggregation method - use 'point' to return each measurement. "
+            "Other options are mean, maxmin, max, min, start, end, first, last, tot, partialtot, cum"
+        ),
+    ),
+    match_comment: str = "",
+    rel_times: bool = False,
+    compressed: bool = False,
+    # rounding: - TBA
+):
+    """Retrieves one or more time series traces.
+    
+    See <a href='http://kisters.com.au/doco/hydllp.htm#get_ts_traces'>http://kisters.com.au/doco/hydllp.htm#get_ts_traces</a> for more details.
+    
     """
-    if hydllp is None:
-        hydllp = {}
-    if cherrypy_config is None:
-        cherrypy_config = {
-            "server-socket_host": "127.0.0.1",
-            "server-socket_port": 8080,
-            "server-thread_pool": 1,
-            "engine-autoreload-on": True,
+    if start_time:
+        start_time = start_time.strftime("%Y%m%d%H%M%S")
+    else:
+        start_time = 0
+    if end_time:
+        end_time = end_time.strftime("%Y%m%d%H%M%S")
+    else:
+        end_time = 0
+    if start_time == 0:
+        assert end_time == 0
+    elif end_time == 0:
+        assert start_time == 0
+    rel_times = 1 if rel_times else 0
+    compressed = 1 if compressed else 0
+    params = {
+        "site_list": site_list,
+        "start_time": start_time,
+        "end_time": end_time,
+        "interval": interval,
+        "multiplier": multiplier,
+        "report_time": report_time,
+        "offset": offset,
+        "datasource": datasource,
+        "data_type": data_type,
+        "match_comment": match_comment,
+        "rel_times": rel_times,
+        "compressed": compressed,
+    }
+    if varfrom and varto:
+        params.update({"varfrom": varfrom, "varto": varto})
+    else:
+        params.update({"var_list": var_list})
+    return hyd.request({"function": "get_ts_traces", "version": 2, "params": params})
+
+
+@app.get("/sites/{site_list}/geojson")
+def get_site_geojson(
+    site_list: str = Path(..., description="Hydstra site list expression"),
+    get_elev: bool = True,
+    fields: List[str] = None,
+):
+    get_elev = 1 if get_elev else 0
+    if not fields:
+        fields = []
+    return hyd.request(
+        {
+            "function": "get_site_geojson",
+            "version": 2,
+            "params": {"site_list": site_list, "get_elev": get_elev, "fields": fields},
         }
-
-    if tomlfile:
-        tomlcfg = toml.load(tomlfile)
-        hydllp.update(tomlcfg["hydllp"])
-        cherrypy_config.update(tomlcfg["cherrypy"])
-
-    cherrypy.config.update({k.replace("-", "."): v for k, v in cherrypy_config.items()})
-    cherrypy.quickstart(HYDLLPEndpoint(hydllp), "/api", {"/": {}})
+    )
 
 
-def run_entry_point():
-    run(tomlfile=sys.argv[1])
-
-
-if __name__ == "__main__":
-    run_entry_point()
+@app.get("/sites/{site_list}/variables")
+def get_variable_list(
+    site_list: str = Path(..., description="Hydstra site list expression"),
+    datasource: str = Query("A", description="Hydstra datasources to use"),
+):
+    return hyd.request(
+        {
+            "function": "get_variable_list",
+            "version": 1,
+            "params": {"site_list": site_list, "datasource": datasource},
+        }
+    )
