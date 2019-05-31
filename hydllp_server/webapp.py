@@ -141,3 +141,48 @@ def get_variable_list(
             "params": {"site_list": site_list, "datasource": datasource},
         }
     )
+
+
+# @app.get("/sites/{site_list}/blocks")
+# def get_ts_blockinfo(
+#     site_list: str = Path(..., description="Hydstra site list expression"),
+#     datasources: List[str] = Query(["A", "TELEM"], description="Datasource codes"),
+#     variables: List[str] = Query(None, description="Variables"),
+#     starttime: datetime = Query(None, description="Start time in ISO8601 format"),
+#     endtime: datetime = Query(None, description="End time in ISO8601 format"),
+#     start_modified: datetime = Query(
+#         None, description="Start modified time in ISO8601 format"
+#     ),
+#     end_modified: datetime = Query(
+#         None, description="End modified time in ISO8601 format"
+#     ),
+#     fill_gaps: bool = Query(None, description="mark gaps as a block"),
+#     auditinfo: bool,
+# ):
+#     if starttime:
+#         starttime = starttime.strftime("%Y%m%d%H%M%S")
+#     else:
+#         starttime = 0
+#     if endtime:
+#         endtime = endtime.strftime("%Y%m%d%H%M%S")
+#     else:
+#         endtime = 0
+#     if start_modified:
+#         start_modified = start_modified.strftime("%Y%m%d%H%M%S")
+#     else:
+#         start_modified = 0
+#     if end_modified:
+#         end_modified = end_modified.strftime("%Y%m%d%H%M%S")
+#     else:
+#         end_modified = 0
+#     fill_gaps = 1 if fill_gaps else 0
+#     auditinfo = 1 if auditinfo else 0
+#     request = {
+#             "function": "get_ts_blockinfo",
+#             "version": 2,
+#             "params": {
+#                 "site_list": site_list,
+#                 "datasources": datasources,
+#             },
+#         }
+#     )

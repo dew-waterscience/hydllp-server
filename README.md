@@ -1,8 +1,9 @@
 # hydllp-server
 
-CherryPy server for the Hydstra HYDLLP executable, written in Python.
+ASGI web app for the Hydstra HYDLLP executable, written in Python using
+the amazing [fastapi](https://fastapi.tiangolo.com) package.
 
-If you are just looking for code to access Hydstra directly, you may want to
+If you are looking for Python code to access Hydstra directly, you may want to
 check out [pyhydllp](https://pypi.org/project/pyhydllp/). That calls the 
 HYDLLP DLL directly, and has a lot of helper stuff in pandas.
 
