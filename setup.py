@@ -2,15 +2,16 @@ from setuptools import setup
 
 setup(
     name="hydllp-server",
-    version="0.1.0",
-    description="CherryPy server for the Hydstra HYDLLPX executable",
+    use_scm_version=True,
+    setup_requires=["setuptools_scm"],
+    description="Simple FastAPI interface to the HYDLLP executable shipped with Hydstra",
     long_description=open("README.md", "r").read(),
     long_description_content_type="text/markdown",
-    url="https://github.com/kinverarity1/hydllp-server",
+    url="https://github.com/dew-waterscience/hydllp-server",
     author="Kent Inverarity",
     author_email="kent.inverarity@sa.gov.au",
     packages=["hydllp_server"],
-    install_requires=("pandas",),
+    install_requires=("pandas", "fastapi"),
     entry_points={
         "console_scripts": ["hydllp-server = hydllp_server.webapp:run_entry_point"]
     },
