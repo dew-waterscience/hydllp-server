@@ -11,7 +11,7 @@ setup(
     author="Kent Inverarity",
     author_email="kent.inverarity@sa.gov.au",
     packages=["hydllp_server"],
-    install_requires=("pandas", "fastapi"),
+    install_requires=("pandas", "fastapi", "uvicorn"),
     entry_points={
         "console_scripts": ["hydllp-server = hydllp_server.webapp:run_entry_point"]
     },
