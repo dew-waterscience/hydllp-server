@@ -1,13 +1,17 @@
 from datetime import datetime
 import sys
+import io
+import traceback
 
 import json
 import pandas as pd
 import toml
-from fastapi import FastAPI, Body, Query, Path
+from fastapi import FastAPI, Body, Query, Path, Response
 from typing import List
+import pandas as pd
 
 from hydllp_server.hydstra_application import Hydstra
+
 
 hyd = Hydstra(
     r"E:\Telemetry\kinverarity\dew-deployment-tools\services\hydllp-server\config.toml"
@@ -36,9 +40,18 @@ def get_site_list(site_list: str = "*"):
 
 @app.get("/sites/{site_list}/traces")
 def get_ts_traces(
-    site_list: str = Path(..., description="Hydstra site list expression"),
-    start_time: datetime = Query(None, description="Start time in ISO8601 format"),
-    end_time: datetime = Query(None, description="End time in ISO8601 format"),
+    site_list: str = Path(
+        ...,
+        description="Hydstra site list expression, you can use * or also separate with commas e.g. A5031001,A5031002",
+    ),
+    start_time: datetime = Query(
+        None,
+        description="Start time in YYYY-MM-DD HH:MM:SS format. If you enter a start time you must also enter an end time.",
+    ),
+    end_time: datetime = Query(
+        None,
+        description="End time in YYYY-MM-DD HH:MM:SS format. If you enter an end time you must also enter a start time.",
+    ),
     varfrom: str = Query(
         "",
         description="Hydstra variable to calculate from (only use for data transformation)",
@@ -47,7 +60,10 @@ def get_ts_traces(
         "",
         description="Hydstra variable to calculate to (only use for data transformation)",
     ),
-    var_list: str = Query("114.00", description="Hydstra variable list"),
+    var_list: str = Query(
+        "114.00",
+        description="Hydstra variable list e.g. 10.00 rainfall, 100.00 water level, 114.00 DTW",
+    ),
     interval: str = Query(
         "day",
         description=(
@@ -55,10 +71,15 @@ def get_ts_traces(
             "valid options are 'year, month, day, hour, minute, second, period'"
         ),
     ),
-    multiplier: int = 1,
+    multiplier: int = Query(
+        1,
+        description="Multiplier for interval i.e. if interval == 'minute' and multiplier == 10 you'll get data every 10 minutes.",
+    ),
     report_time: str = "end",
     offset: int = 0,
-    datasource: str = Query("A", description="Hydstra datasources to use"),
+    datasource: str = Query(
+        "A", description="Hydstra datasources to use - either A or TELEM"
+    ),
     data_type: str = Query(
         "point",
         description=(
@@ -69,12 +90,13 @@ def get_ts_traces(
     match_comment: str = "",
     rel_times: bool = False,
     compressed: bool = False,
+    return_format: str = Query("json", description="Return as 'json' or as 'csv'"),
     # rounding: - TBA
 ):
     """Retrieves one or more time series traces.
-    
+
     See <a href='http://kisters.com.au/doco/hydllp.htm#get_ts_traces'>http://kisters.com.au/doco/hydllp.htm#get_ts_traces</a> for more details.
-    
+
     """
     if start_time:
         start_time = start_time.strftime("%Y%m%d%H%M%S")
@@ -108,7 +130,39 @@ def get_ts_traces(
         params.update({"varfrom": varfrom, "varto": varto})
     else:
         params.update({"var_list": var_list})
-    return hyd.request({"function": "get_ts_traces", "version": 2, "params": params})
+    result = hyd.request({"function": "get_ts_traces", "version": 2, "params": params})
+    if return_format == "json":
+        return result
+    elif return_format == "csv":
+        try:
+            df = pd.io.json.json_normalize(
+                result["return"], ["traces", "trace"], [["traces", "site"]]
+            )
+            df["t"] = pd.to_datetime(df.t, format="%Y%m%d%H%M%S")
+            df = df.rename(
+                columns={
+                    "traces.site": "station",
+                    "t": "timestamp",
+                    "d": "datatrans",
+                    "q": "quality_code",
+                    "v": "value",
+                }
+            )
+            # short_name = df["traces.site_details.short_name"].iloc[0]
+            site = df["station"].iloc[0]
+            df = df[["station", "timestamp", "value", "quality_code", "datatrans"]]
+            buffer = io.StringIO()
+            df.to_csv(buffer, index=False)
+            buffer.seek(0)
+            return Response(
+                content=buffer.read(),
+                media_type="text/csv",
+                headers={
+                    "Content-Disposition": f'attachment;filename="trace-{site}.csv"'
+                },
+            )
+        except:
+            return Response(content=str(traceback.format_exc()))
 
 
 @app.get("/sites/{site_list}/geojson")
@@ -160,17 +214,28 @@ def get_subvar_details(
 @app.get("/sites/{site_list}/blocks")
 def get_ts_blockinfo(
     site_list: str = Path(..., description="Hydstra site list expression"),
-    datasources: List[str] = Query(["A", "TELEM"], description="Datasource codes"),
+    datasources: List[str] = Query(
+        ["A", "TELEM"], description="Datasource codes either A or TELEM"
+    ),
     variables: List[str] = Query(None, description="Variables"),
     # variables: str = "",
-    starttime: datetime = Query(None, description="Start time in ISO8601 format"),
-    endtime: datetime = Query(None, description="End time in ISO8601 format"),
+    starttime: datetime = Query(
+        None, description="Start time in YYYY-MM-DD HH:MM:SS format"
+    ),
+    endtime: datetime = Query(
+        None, description="End time in YYYY-MM-DD HH:MM:SS format"
+    ),
     start_modified: datetime = Query(
-        None, description="Start modified time in ISO8601 format"
+        None, description="Start modified time in YYYY-MM-DD HH:MM:SS format"
     ),
     end_modified: datetime = Query(
-        None, description="End modified time in ISO8601 format"
+        None, description="End modified time in YYYY-MM-DD HH:MM:SS format"
     ),
+    fill_gaps: bool = Query(
+        False,
+        description="a boolean value used to request gaps returned as blocks with the block being marked as a gap",
+    ),
+    auditinfo: bool = False,
 ):
     if starttime:
         starttime = starttime.strftime("%Y%m%d%H%M%S")
@@ -190,18 +255,20 @@ def get_ts_blockinfo(
         end_modified = 0
     fill_gaps = 1 if fill_gaps else 0
     auditinfo = 1 if auditinfo else 0
-    return hyd.request(
-        {
-            "function": "get_ts_blockinfo",
-            "version": 2,
-            "params": {
-                "site_list": site_list,
-                "datasources": datasources,
-                "variables": variables,
-                "starttime": starttime,
-                "endtime": endtime,
-                "start_modified": start_modified,
-                "end_modified": end_modified,
-            },
-        }
-    )
+    params = {
+        "site_list": site_list,
+        "datasources": datasources,
+        "variables": variables,
+        "fill_gaps": fill_gaps,
+        "auditinfo": auditinfo,
+    }
+    if starttime != 0:
+        params["starttime"] = starttime
+    if endtime != 0:
+        params["endtime"] = endtime
+    if start_modified != 0:
+        params["start_modified"] = start_modified
+    if end_modified != 0:
+        params["end_modified"] = end_modified
+    return hyd.request({"function": "get_ts_blockinfo", "version": 2, "params": params})
+
