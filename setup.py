@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="hydllp-server",
-    use_scm_version=True,
+    use_scm_version={"version_scheme": "post-release"},
     setup_requires=["setuptools_scm"],
     description="Simple FastAPI interface to the HYDLLP executable shipped with Hydstra",
     long_description=open("README.md", "r").read(),
