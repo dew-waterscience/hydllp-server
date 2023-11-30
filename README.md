@@ -1,5 +1,7 @@
 # hydllp-server
 
+- ![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) ***Note***: this project is being archived as of November 2023 as we are no longer using Hydstra.
+
 ASGI web app for the Hydstra HYDLLP executable, written in Python using
 the amazing [fastapi](https://fastapi.tiangolo.com) package.
 
